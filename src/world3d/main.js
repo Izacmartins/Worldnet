@@ -4,11 +4,12 @@ import {WorldRegistry,keyOf} from './model.js';
 import {loadResources,localResources,searchResources,findLocalResources} from '../search-client.js';
 import {getCatalog,searchCatalog} from '../catalog.js';
 import {RESOURCE_LABELS,publicUrl} from '../../shared/resources.js';
+import {appBase,staticPreview} from '../deployment.js';
 
 document.querySelector('#app').innerHTML=`
 <main class="city3d">
   <div id="viewport"></div>
-  <header><a class="brand3d" href="/3d.html" aria-label="Worldnet 3D">W<span>WORLDNET<small>A INTERNET, EM OUTRA DIMENSÃO</small></span></a>
+  <header><a class="brand3d" href="${appBase}3d.html" aria-label="Worldnet 3D">W<span>WORLDNET<small>A INTERNET, EM OUTRA DIMENSÃO</small></span></a>
     <nav><button id="search-open">⌕ <span>LOCALIZAR</span></button><button id="theme" aria-label="Alternar tema">☀</button><button id="help-open" aria-label="Ajuda">?</button></nav>
   </header>
   <aside class="location"><span class="eyebrow" id="location-type">PONTO DE PARTIDA</span><strong id="location-title">Central Worldnet</strong><small id="location-detail">Explore a cidade ou encontre um conteúdo.</small><button id="interact">E · EXPLORAR</button></aside>
@@ -18,6 +19,11 @@ document.querySelector('#app').innerHTML=`
   <dialog id="info-dialog"><div class="dialog-heading"><span class="eyebrow" id="info-type">CONTEÚDO</span><button data-close="info-dialog" aria-label="Fechar conteúdo">✕</button></div><h2 id="info-title"></h2><p id="info-description"></p><p id="info-source"></p><a id="original3d" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">ABRIR ORIGINAL ↗</a></dialog>
   <dialog id="help-dialog"><div class="dialog-heading"><span class="eyebrow">COMO EXPLORAR</span><button data-close="help-dialog" aria-label="Fechar ajuda">✕</button></div><h2>Uma cidade de descobertas.</h2><p>WASD ou setas movem o personagem em relação à câmera. Segure o botão esquerdo no chão para guiar. Arraste com o botão direito ou Shift para girar a câmera; use a roda para aproximar.</p><p>E ou F interage com o lugar atual. / abre a pesquisa. Selecionar um resultado leva ao seu endereço permanente. As placas fazem parte da cena tridimensional.</p><p>Dados indisponíveis não são inventados. A descoberta ampla depende das fontes de busca configuradas.</p><a href="/">ABRIR VERSÃO 2D ↗</a><details><summary>Diagnóstico de desempenho</summary><pre id="diagnostics"></pre></details></dialog>
 </main>`;
+document.querySelector('#help-dialog a').href=appBase;
+if(staticPreview){
+  document.documentElement.classList.add('preview-mode');
+  const badge=document.createElement('div');badge.className='preview3d';badge.textContent='PRÉVIA LOCAL · Busque Astronomia ou cole um link';document.querySelector('.city3d').append(badge);
+}
 const $=id=>document.getElementById(id),registry=new WorldRegistry();
 let runtime=null,catalog=null,currentSite=null,theme='dark',searching=false,queryVersion=0,noticeTimer;
 try{theme=localStorage.getItem('worldnet-3d-theme')==='light'?'light':'dark';}catch{}
@@ -71,7 +77,7 @@ $('search3d').onsubmit=async e=>{
     refreshRegistry();
     const merged=new Map();for(const item of [...response.results,...local,...(catalog?searchCatalog(catalog,query,8):[])])if(!merged.has(keyOf(item)))merged.set(keyOf(item),item);
     const results=[...merged.values()];renderResults(results);
-    $('search-status').textContent=response.errors?.length?`${results.length} resultado(s). Fontes parcialmente indisponíveis; você pode colar um link.`:results.length?`${results.length} destino(s). Escolha um para explorar.`:'Nenhum resultado nas fontes disponíveis.';
+    $('search-status').textContent=staticPreview?`${results.length} resultado(s) no catálogo local. Esta prévia não pesquisa a web.`:response.errors?.length?`${results.length} resultado(s). Fontes parcialmente indisponíveis; você pode colar um link.`:results.length?`${results.length} destino(s). Escolha um para explorar.`:'Nenhum resultado nas fontes disponíveis.';
   }finally{searching=false;$('submit3d').disabled=false;}
 };
 

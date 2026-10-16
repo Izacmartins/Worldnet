@@ -1,5 +1,6 @@
 import {loadResources, localResources, findLocalResources, searchResources, resourceKey} from './search-client.js';
 import {RESOURCE_LABELS} from '../shared/resources.js';
+import {appBase,staticPreview} from './deployment.js';
 import Phaser from 'phaser';
 import './style.css';
 import {createContentPanel} from './content-ui.js';
@@ -25,7 +26,7 @@ app.innerHTML = `
   <header class="topbar">
     <div class="brand"><span class="brand-symbol">W<span class="brand-spark">✦</span></span><div><strong>WORLDNET<span class="brand-point">.</span></strong><small>DIGITAL CITY  /  EXPLORE</small></div></div>
     <div class="top-actions">
-      <a class="tool-button world3d-link" href="/3d.html" title="Explorar cidade 3D">3D ↗</a>
+      <a class="tool-button world3d-link" href="${appBase}3d.html" title="Explorar cidade 3D">3D ↗</a>
       <div class="counter" id="counter">Preparando cidade…</div>
       <button id="depth-toggle" class="tool-button" type="button" aria-label="Alternar efeito de profundidade" title="Alternar efeito de profundidade">◉ <span>FOCO</span></button>
       <button id="theme-toggle" class="tool-button" type="button" aria-label="Alternar tema dark e light" title="Alternar tema dark/light">☾ <span>DARK</span></button>
@@ -51,6 +52,8 @@ app.innerHTML = `
     </section>
   </div>
 </main>`;
+
+if(staticPreview)document.querySelector('.limitation').textContent='Prévia local: pesquisa apenas no catálogo e nos links salvos neste navegador. A pesquisa completa na web exige o servidor Worldnet Search.';
 
 const el = id => document.getElementById(id);
 const modal = el('search-modal');
