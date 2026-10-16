@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import {CELL,terrainSeed} from './model.js';
+import {MediaPool} from './media.js';
+import {RESOURCE_LABELS} from '../../shared/resources.js';
 
 const PALETTES={
   dark:{sky:0x101c30,fog:0x101c30,road:0x17263b,pavement:0x2a3b50,body:0x41576e,glass:0x68bfc7,grass:0x1a665b,tree:0x42b58b,text:'#eafaff',board:'#142839'},
@@ -8,10 +10,11 @@ const PALETTES={
 export {PALETTES};
 
 export function createAssets(){
-  const geometries={box:new THREE.BoxGeometry(1,1,1),trunk:new THREE.CylinderGeometry(.14,.22,1,5),tree:new THREE.IcosahedronGeometry(1,0)};
+  const geometries={box:new THREE.BoxGeometry(1,1,1),trunk:new THREE.CylinderGeometry(.14,.22,1,5),tree:new THREE.IcosahedronGeometry(1,0),ring:new THREE.TorusGeometry(1,.045,4,32)};
   const material=new THREE.MeshStandardMaterial({roughness:.8,metalness:.12});
   const glow=new THREE.MeshStandardMaterial({roughness:.5,metalness:.1,emissive:0x559fbc,emissiveIntensity:.35});
-  return {geometries,material,glow,dispose(){Object.values(geometries).forEach(g=>g.dispose());material.dispose();glow.dispose();}};
+  const media=new MediaPool();
+  return {geometries,material,glow,media,dispose(){media.dispose();Object.values(geometries).forEach(g=>g.dispose());material.dispose();glow.dispose();}};
 }
 
 const dummy=new THREE.Object3D();
@@ -37,11 +40,30 @@ function panelTexture(title,subtitle,palette){
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;return texture;
 }
 
+function contentTexture(p,palette){
+  const canvas=document.createElement('canvas');canvas.width=640;canvas.height=320;
+  const c=canvas.getContext('2d');c.fillStyle=palette.board;c.fillRect(0,0,640,320);
+  c.fillStyle='#76e6d4';c.font='bold 19px system-ui';c.fillText(p.home?'ESTAÇÃO DE DESCOBERTA':(RESOURCE_LABELS[p.kind]||'SITE').toUpperCase(),26,38);
+  c.fillStyle=palette.text;c.font='bold 27px system-ui';c.fillText(p.home?'Qual será seu próximo lugar?':p.title,26,84,585);
+  const text=p.home?'Clique na Central ou pressione / para pesquisar. Cada resultado ocupa um lugar nesta cidade.':p.site.description||'Endereço adicionado pelo visitante. Não há descrição confirmada para este lugar.';
+  c.font='22px system-ui';let line='',y=132;
+  for(const word of text.slice(0,350).split(/\s+/)){
+    if(c.measureText(line+' '+word).width>575){c.fillText(line,26,y);line=word;y+=30;if(y>236)break;}else line+=(line?' ':'')+word;
+  }
+  if(y<=236)c.fillText(line,26,y,575);
+  c.globalAlpha=.7;c.font='16px system-ui';c.fillText(p.home?'WORLDNET · SEU NAVEGADOR, SEU MUNDO':p.site.source||p.site.domain,26,272,585);
+  c.font='14px system-ui';c.fillText([p.site?.credit,p.site?.license].filter(Boolean).join(' · ').slice(0,160),26,301,585);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;return texture;
+}
+
 export function buildChunk(assets,{x,z,description,detail,theme}){
   const group=new THREE.Group(),owned=[],palette=PALETTES[theme],seed=terrainSeed(x,z);
   const solids=[{x:16,y:-.2,z:12,w:CELL.x,h:.4,d:CELL.z,color:palette.road},
     {x:16,y:.03,z:12,w:27,h:.12,d:19,color:palette.pavement}];
   const windows=[];
+  // Road paint and edge strips share the same instanced geometry as buildings.
+  for(const xx of [5,11,17,23,29])solids.push({x:xx,y:.015,z:1,w:2,h:.025,d:.12,color:palette.pavement});
+  for(const zz of [5,11,17,23])solids.push({x:1,y:.015,z:zz,w:.12,h:.025,d:2,color:palette.pavement});
   if(description){
     const p=description;
     for(const body of p.bodies){
@@ -58,6 +80,7 @@ export function buildChunk(assets,{x,z,description,detail,theme}){
     }
     if(detail==='full'){
       const b=p.bodies[0],front=b.z+b.d/2+.2;
+      solids.push({x:b.x-b.w/2+.2,y:b.h/2,z:front-.12,w:.18,h:b.h,d:.2,color:p.secondary});
       solids.push({x:b.x,y:1.2,z:front,w:1.5,h:2.2,d:.25,color:palette.road});
       if(['market','central','pod','kiosk'].includes(p.archetype))solids.push({x:b.x,y:3,z:front+.6,w:b.w*.9,h:.3,d:1.7,color:p.secondary});
       const texture=panelTexture(p.title,p.home?'PESQUISE · EXPLORE · DESCUBRA':p.site.metadataStatus==='url-only'?'Endereço · metadados não confirmados':p.site.source||p.site.domain,palette);
@@ -69,10 +92,23 @@ export function buildChunk(assets,{x,z,description,detail,theme}){
       if(p.home||p.site?.id){
         const px=24,pz=19.1;
         solids.push({x:px,y:1,z:pz,w:.28,h:2,d:.3,color:palette.body},{x:px,y:2.7,z:pz,w:5.6,h:2.6,d:.35,color:p.accent});
-        const content=new THREE.Mesh(new THREE.PlaneGeometry(5.2,2.2),material);owned.push(content.geometry);
+        const infoTexture=contentTexture(p,palette),infoMaterial=new THREE.MeshBasicMaterial({map:infoTexture});owned.push(infoTexture,infoMaterial);
+        const content=new THREE.Mesh(new THREE.PlaneGeometry(5.2,2.6),infoMaterial);owned.push(content.geometry);
         content.position.set(px,2.7,pz+.2);group.add(content);
         content.userData.interactive=true;
         group.userData.mediaSurface=content;
+      }
+      if(p.site?.thumbnail){
+        // Real imagery lives on a framed 3D surface; videos never autoplay.
+        const face=new THREE.MeshBasicMaterial({color:palette.board}),geo=new THREE.PlaneGeometry(4,2.4),screen=new THREE.Mesh(geo,face);owned.push(face,geo);
+        screen.position.set(b.x, b.h+1.8, b.z+.3);group.add(screen);screen.userData.interactive=true;
+        solids.push({x:b.x,y:b.h+1.8,z:b.z,w:4.3,h:2.7,d:.35,color:p.accent},{x:b.x,y:b.h+.5,z:b.z,w:.25,h:1,d:.3,color:palette.body});
+        const release=assets.media.acquire(p.site.thumbnail,texture=>{face.map=texture;face.color.set(0xffffff);face.needsUpdate=true;const ratio=texture.image.width/texture.image.height;screen.scale.set(Math.min(1,ratio/1.667),Math.min(1,1.667/ratio),1);});
+        owned.push({dispose:release});
+      }
+      if(p.home){
+        const ring=new THREE.Mesh(assets.geometries.ring,assets.glow);ring.rotation.x=Math.PI/2;ring.scale.setScalar(7);ring.position.set(16,9.6,12);group.add(ring);
+        for(const xx of [7,25])solids.push({x:xx,y:3,z:12,w:.4,h:6,d:.4,color:p.accent});
       }
     }
   } else {

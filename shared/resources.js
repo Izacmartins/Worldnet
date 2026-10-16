@@ -1,5 +1,5 @@
 // Browser/server contract. URLs identify resources; domains identify their publishers.
-export const RESOURCE_LABELS = Object.freeze({site:'Site', channel:'Canal', video:'Vídeo', article:'Artigo', page:'Página', image:'Imagem'});
+export const RESOURCE_LABELS = Object.freeze({site:'Site', channel:'Canal', video:'Vídeo', article:'Artigo', page:'Página', image:'Imagem', repository:'Projeto', book:'Livro'});
 
 export function publicUrl(value) {
   try {
@@ -55,6 +55,6 @@ export function resourceSite(resource) {
     displayName=resource.kind==='channel'?`Canal ${path.replace(/^\//,'')}`:
       resource.kind==='video'?`Vídeo ${url.searchParams.get('v')}`:resource.url;
   }
-  return {...resource,displayName, category:['channel','video'].includes(resource.kind)?'Mídia':resource.kind==='article'?'Wiki':'Site',
+  return {...resource,displayName, category:resource.category||(['channel','video'].includes(resource.kind)?'Mídia':resource.kind==='repository'?'Tecnologia':resource.kind==='book'?'Educação':resource.kind==='article'?'Wiki':'Site'),
     categoryConfidence:'estimativa',official:false,colorVerified:false,logoVerified:false};
 }

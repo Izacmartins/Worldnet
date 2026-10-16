@@ -13,7 +13,7 @@ export function describeBuilding(site,home=false){
   const seed=id.seed,rank=Number(site?.rank)||Infinity;
   const level=home?3:infoLevel(site);
   const kind=site?.kind;
-  let archetype=home?'central':kind==='video'?'screen':kind==='channel'?'studio':id.archetype;
+  let archetype=home?'central':kind==='video'?'screen':kind==='channel'?'studio':kind==='book'?'archive':kind==='repository'?'tech':kind==='image'?'gallery':id.archetype;
   const w=home?15:10+(seed%5),d=home?10:7+((seed>>>4)%4);
   const h=home?7:5+((seed>>>8)%6)+(rank<=100?4:0)+(level===3?2:0);
   const bodies=[];
@@ -24,6 +24,10 @@ export function describeBuilding(site,home=false){
     case 'commons':case 'campus':box(11,11,5,d,h*.7);box(21,11,5,d,h*.7);box(16,8,5,3,h*.45);break;
     case 'studio':case 'broadcast':box(13,12,w*.7,d,h);box(21,12,5,d-1,h*.65);box(13,12,w*.46,d*.7,2,h);break;
     case 'screen':box(16,11,w,d-2,5);box(16,12,w*.65,d*.6,3,5);break;
+    case 'gallery':box(16,11,w+2,d,4);box(11,10,4,d-2,3,4);break;
+    case 'tech':case 'spire':box(16,12,w*.8,d,h+2);box(16,12,w*.45,d*.65,3,h+2);box(22,12,4,d-1,4);break;
+    case 'concert':case 'arcade':box(16,12,w+2,d+1,5);box(16,10,w*.65,d*.6,3,5);break;
+    case 'finance':case 'tower':box(16,12,w*.7,d,h+4);box(16,12,w,d+1,2);break;
     case 'terrace':case 'loft':box(16,12,w,d,4);box(14,11,w*.75,d*.8,3,4);box(12,10,w*.5,d*.6,2,7);break;
     case 'pod':case 'kiosk':box(16,12,w,d,4);box(16,12,w+2,d+2,1,4);break;
     default:box(16,12,w,d,h);box(16+(seed%2?1:-1),12,w*.65,d*.7,2,h);
@@ -36,8 +40,7 @@ export function describeBuilding(site,home=false){
     home,kind,site};
 }
 
-// Catalog addresses remain compatible with the existing spiral. Content
-// resources use the authoritative SQLite coordinates without reallocating them.
+// The browser assigns addresses once; the renderer never reallocates them.
 export class WorldRegistry {
   constructor(){this.cells=new Map();this.addresses=new Map();this.version=0;}
   replace(resources=[],catalog=[]){

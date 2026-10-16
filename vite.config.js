@@ -1,4 +1,8 @@
-import { defineConfig } from 'vite';
+import {defineConfig} from 'vite';
 import {resolve} from 'node:path';
-const proxy={'/api':{target:'http://127.0.0.1:'+(process.env.API_PORT||8787)}};
-export default defineConfig(({mode})=>({base:mode==='pages'?'./':'/',server:{host:'0.0.0.0',proxy},preview:{proxy:mode==='pages'?undefined:proxy},build:{rollupOptions:{input:{legacy:resolve('index.html'),city3d:resolve('3d.html')}}}}));
+export default defineConfig({
+  base:'./',
+  server:{host:'0.0.0.0'},
+  preview:{host:'0.0.0.0'},
+  build:{rollupOptions:{input:{city:resolve('index.html'),city3d:resolve('3d.html'),legacy:resolve('legacy.html')}}}
+});

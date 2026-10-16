@@ -7,7 +7,7 @@ import {ChunkView} from './chunks.js';
 
 export function createRuntime(container,registry,{isPaused,onInteract,onSearch,onStatus,onContext}={}){
   const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'low-power'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
   const canvas=renderer.domElement;canvas.tabIndex=0;canvas.setAttribute('aria-label','Cidade tridimensional Worldnet');container.append(canvas);
   const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1,.1,200);
@@ -16,6 +16,7 @@ export function createRuntime(container,registry,{isPaused,onInteract,onSearch,o
   const sun=new THREE.DirectionalLight(0xffe4bb,2.2);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.camera.near=1;sun.shadow.camera.far=110;sun.shadow.bias=-.001;sun.shadow.normalBias=.03;scene.add(sun,sun.target);
   let yaw=.55,distance=41,theme='dark',accumulator=0,lastTime=0,contextLost=false,disposed=false;
   let frames=0,lastStatus=0,slow=0,economy=false,lastPosition={...simulation.position};
+  let shadowKey='';
   const frameTimes=[];let rendererMs=0,maxFrame=0;
   const pointer=new THREE.Vector2(),raycaster=new THREE.Raycaster(),plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),intersection=new THREE.Vector3();
   const input=createInput(canvas,{getYaw:()=>yaw,isPaused:()=>isPaused()||contextLost,onInteract:()=>onInteract(current()),onSearch,onCamera:amount=>{yaw-=amount;},onPick:point=>{
@@ -42,11 +43,11 @@ export function createRuntime(container,registry,{isPaused,onInteract,onSearch,o
   function setTheme(value){
     theme=value;const p=PALETTES[theme];scene.background=new THREE.Color(p.sky);scene.fog=new THREE.Fog(p.fog,65,120);
     ambient.intensity=theme==='dark'?1.8:2.6;sun.intensity=theme==='dark'?1.8:2.4;renderer.toneMappingExposure=theme==='dark'?1.15:1;
-    chunks.setTheme(theme);
+    chunks.setTheme(theme);renderer.shadowMap.needsUpdate=true;
   }
   setTheme(theme);
   const lose=e=>{e.preventDefault();contextLost=true;input.reset();onContext?.(true);};
-  const restore=()=>{contextLost=false;lastTime=0;accumulator=0;onContext?.(false);};
+  const restore=()=>{contextLost=false;lastTime=0;accumulator=0;renderer.shadowMap.needsUpdate=true;onContext?.(false);};
   canvas.addEventListener('webglcontextlost',lose);canvas.addEventListener('webglcontextrestored',restore);
   function current(){
     const c=cellAt(simulation.position),description=simulation.description(c.x,c.z);
@@ -84,6 +85,8 @@ export function createRuntime(container,registry,{isPaused,onInteract,onSearch,o
     const offset=new THREE.Vector3(Math.sin(yaw)*distance,distance*.87,Math.cos(yaw)*distance);
     camera.position.copy(local).add(offset);camera.lookAt(local.x,1,local.z);camera.updateMatrixWorld();
     sun.position.copy(local).add(new THREE.Vector3(-18,35,16));sun.target.position.copy(local);sun.target.updateMatrixWorld();
+    const nextShadowKey=`${chunks.created}:${chunks.disposed}`;
+    if(moved>.001||shadowKey!==nextShadowKey){renderer.shadowMap.needsUpdate=true;shadowKey=nextShadowKey;}
     const start=performance.now();renderer.render(scene,camera);rendererMs=performance.now()-start;
     frames++;
     if(time-lastStatus>500){lastStatus=time;onStatus?.({site:current(),...snapshot()});}
@@ -91,6 +94,7 @@ export function createRuntime(container,registry,{isPaused,onInteract,onSearch,o
   renderer.setAnimationLoop(frame);
   return {
     canvas,snapshot,setTheme,currentSite:current,
+    orbit(amount){yaw+=amount;},
     resetInput(){input.reset();},
     focus(reset=true){if(reset)input.reset();canvas.focus({preventScroll:true});},
     teleport(id){const cell=typeof id==='string'?registry.address(id):id;if(!cell||!simulation.teleport(cell))return false;input.reset();accumulator=0;chunks.update(simulation.position);return true;},

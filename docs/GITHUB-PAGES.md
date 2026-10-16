@@ -1,30 +1,19 @@
-# Testar no GitHub Pages
+# Worldnet no GitHub Pages
 
-O Pages hospeda somente a parte estática. Para uma prévia gratuita, este projeto oferece `npm run build:pages`. A versão completa com Node/SQLite/SearXNG continua usando `npm run build` e precisa de um servidor que execute esses serviços.
-
-## Prévia estática
-
-- Câmera 3D, movimento, colisões, chunks e temas funcionam no navegador.
-- A busca trabalha apenas no catálogo local da prévia e em links adicionados pelo visitante. O aviso **PRÉVIA LOCAL** permanece visível. Não são resultados de uma pesquisa na internet.
-- O catálogo inicial contém dois endereços de canais (sem confirmar seus metadados) e o título/link público de Astronomia na Wikipédia, previamente verificado. Não há produtos, notícias, imagens ou vídeos inventados.
-- Recursos e endereços adicionados são guardados no IndexedDB do visitante, em banco separado do ambiente com backend. Esse modo não mantém um mundo compartilhado entre todos os visitantes.
-- O código não tenta chamar `/api` no Pages. Ranking e módulos de mídia legados ainda podem consultar suas fontes públicas diretamente quando CORS/rede permitem.
-- Assets e navegação usam caminhos relativos, incluindo quando o site fica em `/Worldnet/`.
+A versão 1.3 é estática e funciona individualmente no navegador de cada visitante. Não é necessário hospedar API, banco de dados ou SearXNG. Consultas remotas são diretas às fontes públicas compatíveis; não é uma busca geral de toda a web.
 
 ```sh
 npm ci
-npm run build:pages
+npm run build
 npm run test:pages
 ```
 
-O teste usa Chromium e um servidor estático sob `/Worldnet/`, sem API. Verifica busca local, teleporte, cadastro de link, persistência, navegação 2D/3D, viewport estreito e ausência de chamadas `/api`.
+O build usa caminhos relativos e abre a cidade 3D em `index.html`. `3d.html` é um alias; `legacy.html` guarda o protótipo 2D. `npm run build:pages` produz o mesmo aplicativo. Não há mais a prévia separada que só consultava três endereços.
 
-## Publicação
+A branch `gh-pages` recebe **somente o conteúdo de `dist/`**, mais `.nojekyll`. Não enviar `.env`, `data/` ou `node_modules/`. Ao atualizar o código, gerar o build e atualizar essa branch também; não basta enviar as fontes.
 
-A branch `gh-pages` deve conter o conteúdo de `dist/`, mais `.nojekyll`. Nunca enviar `.env`, banco de dados ou `node_modules`. Para atualizar a prévia, gerar novamente o build de Pages e atualizar essa branch.
+No GitHub, entrar em **Settings → Pages → Build and deployment**. Selecionar **Deploy from a branch → gh-pages → /(root) → Save**. O GitHub apresenta a URL real e o estado da publicação. Configurar o site depende das permissões da conta. Enviar a branch não ativa o Pages sozinho.
 
-No repositório GitHub, entrar em **Settings → Pages → Build and deployment** e selecionar **Deploy from a branch**, branch **gh-pages**, pasta **/(root)**, depois **Save**. A página de configurações apresenta a URL real e o estado da publicação. Acrescentar `/3d.html` para abrir a cidade 3D diretamente.
+GitHub Pages é gratuito em repositórios públicos. A disponibilidade em repositórios privados depende do plano/conta. Este projeto não torna o repositório público automaticamente.
 
-GitHub Pages é gratuito para repositórios públicos. Em repositórios privados, a disponibilidade depende do plano/conta. Este projeto não muda a visibilidade do repositório automaticamente. Tornar código privado público exige decisão explícita do proprietário.
-
-Nesta sessão, a consulta à administração de Pages foi recusada pela integração (HTTP 403). Enviar uma branch pelo Git não habilita o site sozinho; o proprietário precisa configurar Pages ou fornecer acesso apropriado. Nenhum token deve ser enviado pelo chat.
+Depois da publicação, abrir a URL em uma janela anônima: a cidade deve iniciar com 32 lugares. Pesquisar `NASA` no filtro **Canais**, visitar o edifício e usar **E** para ver sua origem. Pesquisar `astronomy` em **Projetos**, **Livros** ou **Imagens** consulta fontes reais quando disponíveis. Colar um link registra o endereço sem inventar metadados. Os dados de uma janela anônima não são compartilhados com outros visitantes.
