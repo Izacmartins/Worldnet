@@ -1,0 +1,30 @@
+{
+  "name": "worldnet",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --use-system-ca --use-env-proxy scripts/dev.mjs",
+    "dev:ui": "vite --host 0.0.0.0",
+    "dev:api": "node --env-file-if-exists=.env --use-system-ca --use-env-proxy server/index.js",
+    "start": "node --env-file-if-exists=.env --use-system-ca --use-env-proxy server/index.js --static",
+    "search:up": "node scripts/search-up.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser-smoke.mjs",
+    "test:3d": "node tests/browser-3d.mjs",
+    "test:perf3d": "node tests/perf-3d.mjs"
+  },
+  "engines": {
+    "node": ">=24.12.0"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "playwright-core": "1.64.1",
+    "vite": "^6.3.5"
+  }
+}
